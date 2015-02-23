@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/gorilla/context"
@@ -28,8 +29,8 @@ func NewAuthRoute(store store.UserRepository, opt jwt.Options) *AuthRoute {
 }
 
 func (a *AuthRoute) Login(w http.ResponseWriter, req *http.Request) {
-
 	var authForm map[string]string
+
 	err := RequestToJsonObject(req, &authForm)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -45,14 +46,12 @@ func (a *AuthRoute) Login(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	log.Println("User ID to login", userId)
 	token, err := jwt.GenerateJWTToken(userId, a.options)
 	if err != nil {
 		http.Error(w, "Error while Signing Token :S", http.StatusInternalServerError)
 		return
 	}
-
-	// store token in the session?
-	//SetSessionToken(token, userId)
 
 	jtoken, err := json.Marshal(map[string]string{"token": token})
 	if err != nil {
@@ -62,6 +61,35 @@ func (a *AuthRoute) Login(w http.ResponseWriter, req *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jtoken)
+}
+
+func (a *AuthRoute) Signin(w http.ResponseWriter, req *http.Request) {
+	var authForm map[string]string
+
+	err := RequestToJsonObject(req, &authForm)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	email := authForm["email"]
+	pass := authForm["password"]
+
+	userId, err := a.userStore.Signin(email, pass)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	juser, err := json.Marshal(map[string]string{"id": userId})
+	if err != nil {
+		http.Error(w, "Error marshalling the user to json", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(juser)
 }
 
 // auth middleware for negroni

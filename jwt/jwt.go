@@ -35,6 +35,9 @@ func GenerateJWTToken(userId string, op Options) (string, error) {
 	t.Claims["sub"] = userId
 
 	tokenString, err := t.SignedString([]byte(op.PrivateKey))
+	if err != nil {
+		logError("ERROR: GenerateJWTToken: %v\n", err)
+	}
 	return tokenString, err
 
 }
@@ -74,7 +77,7 @@ func ValidateToken(r *http.Request, publicKey string) (string, string, error) {
 }
 
 func logError(format string, err interface{}) {
-	if logOn {
+	if logOn && err != nil {
 		log.Printf(format, err)
 	}
 }

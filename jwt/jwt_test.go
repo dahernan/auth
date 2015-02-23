@@ -19,7 +19,7 @@ var (
 func TestGenerateToken(t *testing.T) {
 	Convey("Generates a token with a RSA 256 key and Validate it", t, func() {
 
-		userId := "3"
+		userId := "ddhhpp@test.com"
 		op := Options{
 			SigningMethod: "RS256",
 			PublicKey:     Public,

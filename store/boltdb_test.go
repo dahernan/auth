@@ -8,7 +8,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-func deleteBucket(t *testing.T, db *bolt.DB, bucket string) {
+func DeleteBucket(t *testing.T, db *bolt.DB, bucket string) {
 	db.Update(func(tx *bolt.Tx) error {
 		err := tx.DeleteBucket([]byte(bucket))
 		if err != nil {
@@ -19,7 +19,7 @@ func deleteBucket(t *testing.T, db *bolt.DB, bucket string) {
 	})
 }
 
-func newDB(t *testing.T, name string) *bolt.DB {
+func NewDB(t *testing.T, name string) *bolt.DB {
 	db, err := bolt.Open(name, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		t.Error(err)
@@ -29,11 +29,11 @@ func newDB(t *testing.T, name string) *bolt.DB {
 
 func TestSignIn(t *testing.T) {
 	Convey("SingIn in Bolt", t, func() {
-		db := newDB(t, "testUsers.db")
+		db := NewDB(t, "testUsers.db")
 		defer db.Close()
 
 		bucket := "testBucket"
-		deleteBucket(t, db, bucket)
+		DeleteBucket(t, db, bucket)
 		bs, err := NewBoltStore(db, bucket)
 		So(err, ShouldBeNil)
 		So(bs, ShouldNotBeNil)
@@ -48,11 +48,11 @@ func TestSignIn(t *testing.T) {
 
 func TestSignInDuplicateEmail(t *testing.T) {
 	Convey("SingIn in fail because a duplicate email", t, func() {
-		db := newDB(t, "testUsers.db")
+		db := NewDB(t, "testUsers.db")
 		defer db.Close()
 
 		bucket := "testBucketDup"
-		deleteBucket(t, db, bucket)
+		DeleteBucket(t, db, bucket)
 		bs, err := NewBoltStore(db, bucket)
 		So(err, ShouldBeNil)
 		So(bs, ShouldNotBeNil)
@@ -70,11 +70,11 @@ func TestSignInDuplicateEmail(t *testing.T) {
 
 func TestGetUserDataByEmail(t *testing.T) {
 	Convey("Gets the user data by the email", t, func() {
-		db := newDB(t, "testUsers.db")
+		db := NewDB(t, "testUsers.db")
 		defer db.Close()
 
 		bucket := "testBucketGet"
-		deleteBucket(t, db, bucket)
+		DeleteBucket(t, db, bucket)
 		bs, err := NewBoltStore(db, bucket)
 		So(err, ShouldBeNil)
 		So(bs, ShouldNotBeNil)
@@ -97,11 +97,11 @@ func TestGetUserDataByEmail(t *testing.T) {
 
 func TestGetUserDataByEmailReturnUserNotFound(t *testing.T) {
 	Convey("Gets the user data by the email returns an error if the user is not found", t, func() {
-		db := newDB(t, "testUsers.db")
+		db := NewDB(t, "testUsers.db")
 		defer db.Close()
 
 		bucket := "testBucketNotFound"
-		deleteBucket(t, db, bucket)
+		DeleteBucket(t, db, bucket)
 		bs, err := NewBoltStore(db, bucket)
 		So(err, ShouldBeNil)
 		So(bs, ShouldNotBeNil)
@@ -115,11 +115,11 @@ func TestGetUserDataByEmailReturnUserNotFound(t *testing.T) {
 
 func TestLogIn(t *testing.T) {
 	Convey("Log in Bolt", t, func() {
-		db := newDB(t, "testUsers.db")
+		db := NewDB(t, "testUsers.db")
 		defer db.Close()
 
 		bucket := "testBucketLog"
-		deleteBucket(t, db, bucket)
+		DeleteBucket(t, db, bucket)
 		bs, err := NewBoltStore(db, bucket)
 		So(err, ShouldBeNil)
 		So(bs, ShouldNotBeNil)
@@ -138,11 +138,11 @@ func TestLogIn(t *testing.T) {
 
 func TestLogInBadEmail(t *testing.T) {
 	Convey("Log in returns an error if the user is not found", t, func() {
-		db := newDB(t, "testUsers.db")
+		db := NewDB(t, "testUsers.db")
 		defer db.Close()
 
 		bucket := "testBucketLogNoUser"
-		deleteBucket(t, db, bucket)
+		DeleteBucket(t, db, bucket)
 		bs, err := NewBoltStore(db, bucket)
 		So(err, ShouldBeNil)
 		So(bs, ShouldNotBeNil)
@@ -161,11 +161,11 @@ func TestLogInBadEmail(t *testing.T) {
 
 func TestLogInBadPass(t *testing.T) {
 	Convey("Log in returns an error if the password is wrong", t, func() {
-		db := newDB(t, "testUsers.db")
+		db := NewDB(t, "testUsers.db")
 		defer db.Close()
 
 		bucket := "testBucketLogNoUser"
-		deleteBucket(t, db, bucket)
+		DeleteBucket(t, db, bucket)
 		bs, err := NewBoltStore(db, bucket)
 		So(err, ShouldBeNil)
 		So(bs, ShouldNotBeNil)
