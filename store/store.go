@@ -3,16 +3,44 @@ package store
 import (
 	"crypto/rand"
 	"crypto/subtle"
+	"errors"
 	"io"
 
 	"golang.org/x/crypto/scrypt"
 )
 
+var (
+	ErrEmailDuplication = errors.New("The email is already in the store")
+	ErrUserNotFound     = errors.New("User not found")
+	ErrWrongPassword    = errors.New("email or password is incorrent")
+)
+
+type User struct {
+	Id       string
+	Email    string
+	Password string
+	Salt     string
+}
+
 type UserRepository interface {
 	Signin(email, pass string) (string, error)
 	Login(email, pass string) (string, error)
-	//Logout(userId string) error
-	//User(userId string) (UserData, error)
+	UserByEmail(email string) (User, error)
+}
+
+func NewUser(userId, email, pass string) (User, error) {
+	salt := GenerateRandomKey(32)
+	hpass, err := HashPassword(pass, salt)
+
+	if err != nil {
+		return User{}, err
+	}
+	return User{
+		Id:       userId,
+		Email:    email,
+		Password: string(hpass),
+		Salt:     string(salt),
+	}, nil
 }
 
 func HashPassword(pass string, salt []byte) ([]byte, error) {
@@ -30,82 +58,3 @@ func GenerateRandomKey(strength int) []byte {
 	}
 	return k
 }
-
-// func (r *RedisRepository) Signin(email, pass string) (string, error) {
-// 	log.Println("INFO: New user Signin", email)
-
-// 	_, err := r.UserByEmail(email)
-// 	if err == nil {
-// 		log.Println("INFO: Duplicated Email: ", email)
-// 		// user is already in the system
-// 		return "", ErrEmailDuplication
-// 	}
-
-// 	id, err := r.client.Incr(usersIdKey)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	userId := strconv.FormatInt(id, 10)
-
-// 	salt := GenerateRandomKey(32)
-// 	hpass, err := HashPassword(pass, salt)
-
-// 	if err != nil {
-// 		return "", err
-// 	}
-
-// 	data := map[string]string{
-// 		"Email":    email,
-// 		"UserId":   userId,
-// 		"Password": string(hpass),
-// 		"Salt":     string(salt),
-// 	}
-
-// 	err = r.client.HMSet(userKey+userId, data)
-// 	if err != nil {
-// 		return "", err
-// 	}
-
-// 	err = r.SetEmail(email, userId)
-// 	if err != nil {
-// 		return "", err
-// 	}
-
-// 	return userId, nil
-
-// }
-
-// func (r *RedisRepository) Login(email, pass string) (string, error) {
-// 	id, err := r.UserByEmail(email)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	userId := string(id)
-// 	if userId == "" {
-// 		return "", ErrUserNotFound
-// 	}
-
-// 	data, err := r.client.HMGet(userKey+userId, "Password", "Salt")
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	if string(data[0]) == "" {
-// 		return "", ErrUserNotFound
-// 	}
-// 	passStored := data[0]
-// 	salt := data[1]
-
-// 	hpass, err := HashPassword(pass, salt)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	passOk := SecureCompare(hpass, passStored)
-// 	if !passOk {
-// 		return "", ErrWrongPassword
-// 	}
-
-// 	r.client.HSet(userKey+userId, "Lastlogin", strconv.FormatInt(time.Now().Unix(), 10))
-// 	log.Println("INFO: User Login", userId, email)
-
-// 	return userId, nil
-// }
