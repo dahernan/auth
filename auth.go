@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 
@@ -92,18 +93,21 @@ func (a *AuthRoute) Signin(w http.ResponseWriter, req *http.Request) {
 	w.Write(juser)
 }
 
-// auth middleware for negroni
-func (a *AuthRoute) AuthMiddleware(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
-	var userId, token string
-	var err error
-
+func (a *AuthRoute) authenticate(w http.ResponseWriter, r *http.Request) (string, string, error) {
 	auth := r.Header.Get("Authorization")
 	if auth == "" {
-		http.Error(w, "Error no token is provided", http.StatusUnauthorized)
-		return
+		return "", "", errors.New("Error no token is provided")
 	}
+	userId, token, err := jwt.ValidateToken(r, a.options.PublicKey)
+	if err != nil {
+		return "", "", err
+	}
+	return userId, token, nil
+}
 
-	userId, token, err = jwt.ValidateToken(r, a.options.PublicKey)
+// auth middleware for negroni
+func (a *AuthRoute) AuthMiddleware(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+	userId, token, err := a.authenticate(w, r)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -115,6 +119,27 @@ func (a *AuthRoute) AuthMiddleware(w http.ResponseWriter, r *http.Request, next 
 	next(w, r)
 	context.Clear(r)
 
+}
+
+func GetUserId(r *http.Request) string {
+	return context.Get(r, UserKey).(string)
+}
+func GetToken(r *http.Request) string {
+	return context.Get(r, TokenKey).(string)
+}
+
+func (a *AuthRoute) AuthHandler(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userId, token, err := a.authenticate(w, r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		context.Set(r, TokenKey, token)
+		context.Set(r, UserKey, userId)
+		h.ServeHTTP(w, r)
+		context.Clear(r)
+	})
 }
 
 func RequestToJsonObject(req *http.Request, jsonDoc interface{}) error {

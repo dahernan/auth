@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,41 +19,16 @@ import (
 
 var (
 	// filled in init at the end of the file
-	options jwt.Options
-	Private string
-	Public  string
+	options      jwt.Options
+	Private      string
+	Public       string
+	expiredToken string
 )
-
-func DeleteBucket(t *testing.T, db *bolt.DB, bucket string) {
-	db.Update(func(tx *bolt.Tx) error {
-		err := tx.DeleteBucket([]byte(bucket))
-		if err != nil {
-			t.Errorf("Deleting bucket: %s", err)
-			return err
-		}
-		return nil
-	})
-}
-
-func NewDB(t *testing.T, name string) *bolt.DB {
-	db, err := bolt.Open(name, 0600, &bolt.Options{Timeout: 1 * time.Second})
-	if err != nil {
-		t.Error(err)
-	}
-	return db
-}
 
 func TestSignIn(t *testing.T) {
 	Convey("Singin with a http request", t, func() {
-
-		db := NewDB(t, "testHttpUsers.db")
+		db, bs := initBoltStore(t)
 		defer db.Close()
-
-		bucket := "testBucket"
-		DeleteBucket(t, db, bucket)
-		bs, err := store.NewBoltStore(db, bucket)
-		So(err, ShouldBeNil)
-		So(bs, ShouldNotBeNil)
 
 		route := NewAuthRoute(bs, options)
 
@@ -82,15 +58,8 @@ func TestSignIn(t *testing.T) {
 
 func TestSignInDuplicateUser(t *testing.T) {
 	Convey("Singin with a http request returns a error for duplicate user", t, func() {
-
-		db := NewDB(t, "testHttpUsers.db")
+		db, bs := initBoltStore(t)
 		defer db.Close()
-
-		bucket := "testBucket"
-		DeleteBucket(t, db, bucket)
-		bs, err := store.NewBoltStore(db, bucket)
-		So(err, ShouldBeNil)
-		So(bs, ShouldNotBeNil)
 
 		email := "ddhhpp@test.com"
 		pass := "123456"
@@ -119,14 +88,8 @@ func TestSignInDuplicateUser(t *testing.T) {
 
 func TestLogin(t *testing.T) {
 	Convey("Login with a http request", t, func() {
-		db := NewDB(t, "testHttpUsers.db")
+		db, bs := initBoltStore(t)
 		defer db.Close()
-
-		bucket := "testBucket"
-		DeleteBucket(t, db, bucket)
-		bs, err := store.NewBoltStore(db, bucket)
-		So(err, ShouldBeNil)
-		So(bs, ShouldNotBeNil)
 
 		route := NewAuthRoute(bs, options)
 
@@ -158,14 +121,8 @@ func TestLogin(t *testing.T) {
 
 func TestLoginNoUser(t *testing.T) {
 	Convey("Login with a non existing user", t, func() {
-		db := NewDB(t, "testHttpUsers.db")
+		db, bs := initBoltStore(t)
 		defer db.Close()
-
-		bucket := "testBucket"
-		DeleteBucket(t, db, bucket)
-		bs, err := store.NewBoltStore(db, bucket)
-		So(err, ShouldBeNil)
-		So(bs, ShouldNotBeNil)
 
 		route := NewAuthRoute(bs, options)
 
@@ -194,14 +151,8 @@ func TestLoginNoUser(t *testing.T) {
 
 func TestLoginWrongPass(t *testing.T) {
 	Convey("Login with a wrong password", t, func() {
-		db := NewDB(t, "testHttpUsers.db")
+		db, bs := initBoltStore(t)
 		defer db.Close()
-
-		bucket := "testBucket"
-		DeleteBucket(t, db, bucket)
-		bs, err := store.NewBoltStore(db, bucket)
-		So(err, ShouldBeNil)
-		So(bs, ShouldNotBeNil)
 
 		route := NewAuthRoute(bs, options)
 
@@ -226,6 +177,164 @@ func TestLoginWrongPass(t *testing.T) {
 		So(w.Body.String(), ShouldContainSubstring, "Username or Password Invalid")
 
 	})
+}
+
+func TestAuthMiddleware(t *testing.T) {
+	Convey("AuthMiddleware works with the right credentials", t, func() {
+		db, bs := initBoltStore(t)
+		defer db.Close()
+
+		route := NewAuthRoute(bs, options)
+
+		email := "ddhhpp@test.com"
+		pass := "123456"
+
+		id, err := bs.Signin(email, pass)
+		So(err, ShouldBeNil)
+		So(id, ShouldNotBeEmpty)
+
+		So(err, ShouldBeNil)
+
+		// Login to get the token
+		token := loginRequest(t, route, email, pass)
+
+		// Test the Auth
+		req, err := httpRequest("POST", "http://auth", nil)
+		So(err, ShouldBeNil)
+		req.Header.Add("Authorization", strings.Join([]string{"Bearer", token}, " "))
+
+		handler := func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}
+
+		w := httptest.NewRecorder()
+		route.AuthMiddleware(w, req, handler)
+
+		t.Logf("%d - %s", w.Code, w.Body.String())
+		So(w.Code, ShouldEqual, http.StatusOK)
+	})
+}
+
+func TestAuthMiddlewareNoHeader(t *testing.T) {
+	Convey("AuthMiddleware unauthorized without auth header", t, func() {
+		db, bs := initBoltStore(t)
+		defer db.Close()
+
+		route := NewAuthRoute(bs, options)
+
+		email := "ddhhpp@test.com"
+		pass := "123456"
+
+		id, err := bs.Signin(email, pass)
+		So(err, ShouldBeNil)
+		So(id, ShouldNotBeEmpty)
+
+		// Test the Auth
+		req, err := httpRequest("POST", "http://auth", nil)
+		So(err, ShouldBeNil)
+
+		handler := func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}
+
+		w := httptest.NewRecorder()
+		route.AuthMiddleware(w, req, handler)
+
+		t.Logf("%d - %s", w.Code, w.Body.String())
+		So(w.Code, ShouldEqual, http.StatusUnauthorized)
+	})
+}
+
+func TestAuthMiddlewareInvalidToken(t *testing.T) {
+	Convey("AuthMiddleware unauthorized with expired token", t, func() {
+		db, bs := initBoltStore(t)
+		defer db.Close()
+
+		route := NewAuthRoute(bs, options)
+
+		email := "ddhhpp@test.com"
+		pass := "123456"
+
+		id, err := bs.Signin(email, pass)
+		So(err, ShouldBeNil)
+		So(id, ShouldNotBeEmpty)
+
+		// Test the Auth
+		req, err := httpRequest("POST", "http://auth", nil)
+		So(err, ShouldBeNil)
+
+		req.Header.Add("Authorization", strings.Join([]string{"Bearer", expiredToken}, " "))
+
+		handler := func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}
+
+		w := httptest.NewRecorder()
+		route.AuthMiddleware(w, req, handler)
+
+		t.Logf("%d - %s", w.Code, w.Body.String())
+		So(w.Code, ShouldEqual, http.StatusUnauthorized)
+	})
+}
+
+func loginRequest(t *testing.T, route *AuthRoute, email string, pass string) string {
+	w := httptest.NewRecorder()
+	req, err := httpRequest("POST", "http://login", map[string]string{
+		"email":    email,
+		"password": pass,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	route.Login(w, req)
+
+	var response map[string]string
+	_, err = responseToJson(w, &response)
+	if err != nil {
+		t.Error(err)
+	}
+
+	token := response["token"]
+	if token == "" {
+		t.Error("Token can not be empty")
+	}
+	return token
+}
+
+func initBoltStore(t *testing.T) (*bolt.DB, store.UserRepository) {
+	db := newDB(t, "testHttpUsers.db")
+
+	bucket := "testBucket"
+	deleteBucket(t, db, bucket)
+	bs, err := store.NewBoltStore(db, bucket)
+	if err != nil {
+		t.Error(err)
+		return nil, nil
+	}
+	if bs == nil {
+		t.Error("Could not start Bolt Store")
+	}
+	return db, bs
+}
+
+func deleteBucket(t *testing.T, db *bolt.DB, bucket string) {
+	db.Update(func(tx *bolt.Tx) error {
+		err := tx.DeleteBucket([]byte(bucket))
+		if err != nil {
+			t.Errorf("Deleting bucket: %s", err)
+			return err
+		}
+		return nil
+	})
+}
+
+func newDB(t *testing.T, name string) *bolt.DB {
+	db, err := bolt.Open(name, 0600, &bolt.Options{Timeout: 1 * time.Second})
+	if err != nil {
+		t.Error(err)
+	}
+	return db
 }
 
 func httpRequest(method string, endpoint string, requestBody interface{}) (*http.Request, error) {
@@ -328,6 +437,8 @@ BYglVNzgUIzSo0/y/CD5X4xOk69YzKzSkbBG7TlDkb2LAgMBAAE=
 -----END PUBLIC KEY-----
 
 `
+
+	expiredToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE0MjQ3MTQwOTcsImlhdCI6MTQyNDcxMzkxNywic3ViIjoiZGRoaHBwQHRlc3QuY29tIn0.Wqr81PbN76bo6gg9LZ90epaYfMNigo4x2e_R6XKluzlRRzBi7jXHHWKNgXsoJ44d0Q69SVThLoo8K1r-ggjw1SP73xZ-wYnCuWpunIGjEd6Hj002PAXKILKfQkzLfk-UOUrSnB7g4reAbc4_I9-XXKhHW-x6PLPX3j0nVjFgimB6CPfsOQOhwPdNhXLceYRTnwe3dSl23athaUNXiFwdAoMbrj81832tuoTnxqTMOqGNbuPErMvCz0GoulqV9nzRW47BfObGSf6KAQ0gzDEkbFHtIMVpDqfLBlIJY7HXvOjxiyFN4HZx0SbCA5QhBAj56SNlCgrytm-YXrm_76KdS0F-UdvTGKtPgyB6bg6hbBVD1-YwG4xMQXdOqdEy_HpdNLF0ue7kss3YmXOmyCPqc2WKwLIfdAaukK2oak6j4H9M6b_yQnxCZlEMKj97mhPoxYJ6e4x6InvaBxB6_EAOKDBLnooc9Sn0fYP1reICbO-msJxmKg014AignvJ3xwd0"
 
 	options = jwt.Options{
 		SigningMethod: "RS256",

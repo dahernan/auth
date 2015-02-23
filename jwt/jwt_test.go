@@ -112,7 +112,7 @@ func TestExpiredToken(t *testing.T) {
 		So(token, ShouldNotBeNil)
 
 		handler := func(w http.ResponseWriter, req *http.Request) {
-			time.Sleep(5 * time.Microsecond)
+			time.Sleep(1 * time.Second)
 			_, _, err := ValidateToken(req, Public)
 
 			So(err, ShouldEqual, ErrTokenExpired)
