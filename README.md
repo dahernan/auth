@@ -7,7 +7,7 @@ This is a library to provides secure authentication based in JWT tokens and a im
 * Authentication of the users via configurable store
 * HttpHandle compatible
 * Negroni middleware
-* Uses of Jason Web Tokens (JWT) 
+* Uses of JSON Web Tokens (JWT) 
 * JSON interface
 
 ## Store support
