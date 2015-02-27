@@ -3,7 +3,6 @@ package auth
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 
 	"github.com/gorilla/context"
@@ -47,7 +46,6 @@ func (a *AuthRoute) Login(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	log.Println("User ID to login", userId)
 	token, err := jwt.GenerateJWTToken(userId, a.options)
 	if err != nil {
 		http.Error(w, "Error while Signing Token :S", http.StatusInternalServerError)

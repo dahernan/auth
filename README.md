@@ -5,13 +5,14 @@ This is a library to provides secure authentication based in JWT tokens and a im
 ## Features
 
 * Authentication of the users via configurable store
-* HttpHandle compatible
-* Negroni middleware
+* `net/http` compatible
+* [Negroni](https://github.com/codegangsta/negroni) middleware
 * Uses of JSON Web Tokens (JWT) 
 * JSON interface
 
 ## Store support
-	* BoltDB
+
+* BoltDB
 
 ## Example with standard library
 
