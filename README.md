@@ -59,7 +59,7 @@ func main() {
 	http.HandleFunc("/signin", authRoute.Signin)
 
 	// protects this handle 
-	http.Handle("/sercured", authRoute.AuthHandlerFunc(SecurePlace))
+	http.Handle("/secure", authRoute.AuthHandlerFunc(SecurePlace))
 	http.ListenAndServe(":1212", nil)
 
 }
@@ -132,7 +132,7 @@ func main() {
 
 	// the App
 	router := httprouter.New()
-	router.HandlerFunc("GET", "/secured", SecurePlace)
+	router.HandlerFunc("GET", "/secure", SecurePlace)
 
 	app := negroni.Classic()
 	// Use the middleware to protect this app
@@ -142,3 +142,46 @@ func main() {
 
 }
 ```
+
+## API 
+
+### Signin
+
+```
+$ curl -XPOST "http://localhost:1212/signin" -d'
+> {
+>    "email": "dahernan@dahernan.com",
+>    "password": "justTest123"
+> }'
+
+{"id":"dahernan@dahernan.com"}
+
+```
+
+### Login 
+```
+$ curl -XPOST "http://localhost:1212/login" -d'
+> {
+>    "email": "dahernan@dahernan.com",
+>    "password": "justTest123"
+> }'
+
+{"token":"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE0MjU0MDcyMTksImlhdCI6MTQyNTQwMzYxOSwic3ViIjoiZGFoZXJuYW5AZGFoZXJuYW4uY29tIn0.inRfTdlPZ4dKbHY2dHzTqmyBzLIW9_52oc8NFh_yfnrVEdCzfIAIHIVo_7cksUdUdQ4yMciy-JbuQc8hECx31a3RDNkH2iUSDaueZqM0nJaHsWdLAtO_8nz_zX6AqxPPP-cTb5Qjw3R8cmsrFTwpqTn7agDxgypn7NxFW67WIq_XcjH9Ev9VKFqC7AoV9wo2noX6l42JL_338UoNib3K--cUKTeJdCjygj-LH2TBobG9t3Wn55rFmr1oVfKMOTVx1eJpRl376tUemD-IXxCN0ZG788TLihLhXolbumnHzJ13AzriQEHTOc2GKtwT5M-DqEpj9lhV6uu6clPRFRs9O2PB82t4LkuhWra62-h9_R7fBaCN1-ni03RI-tXKUpWz1XFfcbHzCXzFOhl0fb_h_xpx-xEDKFbEE6JDQowxIIFNTIElv7kz0wke_QUddK1Lz--StMr2BS9Q3h3Xk1XC0dgHsSfZDvF-qbud-asUbaoaokNlsAm0kwUSMTJ_oBi1"}
+```
+
+### GET Secure url without Token
+
+```
+$ curl -XGET "http://localhost:1212/secure"
+
+Error no token is provided
+```
+
+### GET Secure url with Token
+
+```
+$ curl -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE0MjU0MDcyMTksImlhdCI6MTQyNTQwMzYxOSwic3ViIjoiZGFoZXJuYW5AZGFoZXJuYW4uY29tIn0.inRfTdlPZ4dKbHY2dHzTqmyBzLIW9_52oc8NFh_yfnrVEdCzfIAIHIVo_7cksUdUdQ4yMciy-JbuQc8hECx31a3RDNkH2iUSDaueZqM0nJaHsWdLAtO_8nz_zX6AqxPPP-cTb5Qjw3R8cmsrFTwpqTn7agDxgypn7NxFW67WIq_XcjH9Ev9VKFqC7AoV9wo2noX6l42JL_338UoNib3K--cUKTeJdCjygj-LH2TBobG9t3Wn55rFmr1oVfKMOTVx1eJpRl376tUemD-IXxCN0ZG788TLihLhXolbumnHzJ13AzriQEHTOc2GKtwT5M-DqEpj9lhV6uu6clPRFRs9O2PB82t4LkuhWra62-h9_R7fBaCN1-ni03RI-tXKUpWz1XFfcbHzCXzFOhl0fb_h_xpx-xEDKFbEE6JDQowxIIFNTIElv7kz0wke_QUddK1Lz--StMr2BS9Q3h3Xk1XC0dgHsSfZDvF-qbud-asUbaoaokNlsAm0kwUSMTJ_oBi1" -XGET "http://localhost:1212/secure"
+
+Hey dahernan@dahernan.com you have a token
+```
+
