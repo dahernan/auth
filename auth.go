@@ -103,7 +103,17 @@ func (a *AuthRoute) authenticate(w http.ResponseWriter, r *http.Request) (string
 	return userId, token, nil
 }
 
-// auth middleware for negroni
+// Get User from the context
+func GetUserId(r *http.Request) string {
+	return context.Get(r, UserKey).(string)
+}
+
+// Get Token from the context
+func GetToken(r *http.Request) string {
+	return context.Get(r, TokenKey).(string)
+}
+
+// Auth middleware for negroni
 func (a *AuthRoute) AuthMiddleware(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	userId, token, err := a.authenticate(w, r)
 
@@ -119,13 +129,7 @@ func (a *AuthRoute) AuthMiddleware(w http.ResponseWriter, r *http.Request, next 
 
 }
 
-func GetUserId(r *http.Request) string {
-	return context.Get(r, UserKey).(string)
-}
-func GetToken(r *http.Request) string {
-	return context.Get(r, TokenKey).(string)
-}
-
+// Auth Handler for net/http
 func (a *AuthRoute) AuthHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userId, token, err := a.authenticate(w, r)
@@ -137,6 +141,12 @@ func (a *AuthRoute) AuthHandler(h http.Handler) http.Handler {
 		context.Set(r, UserKey, userId)
 		h.ServeHTTP(w, r)
 		context.Clear(r)
+	})
+}
+
+func (a *AuthRoute) AuthHandlerFunc(next http.HandlerFunc) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		a.AuthMiddleware(w, r, next)
 	})
 }
 
