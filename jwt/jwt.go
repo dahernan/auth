@@ -25,7 +25,11 @@ type Options struct {
 	Expiration    time.Duration
 }
 
-// "RS256"
+// Generates a JSON Web Token given an userId (typically an id or an email), and the JWT options
+// to set SigningMethod and the keys you can check
+// http://github.com/dgrijalva/jwt-go
+//
+// In case you use an symmetric-key algorithm set PublicKey and PrivateKey equal to the SecretKey ,
 func GenerateJWTToken(userId string, op Options) (string, error) {
 	t := jwt.New(jwt.GetSigningMethod(op.SigningMethod))
 
@@ -42,6 +46,10 @@ func GenerateJWTToken(userId string, op Options) (string, error) {
 
 }
 
+// Validates the token that is passed in the request with the Authorization header
+// Authorization: Bearer eyJhbGciOiJub25lIn0
+//
+// Returns the userId, token (base64 encoded), error
 func ValidateToken(r *http.Request, publicKey string) (string, string, error) {
 	token, err := jwt.ParseFromRequest(r, func(token *jwt.Token) (interface{}, error) {
 		return []byte(publicKey), nil
