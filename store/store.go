@@ -29,7 +29,7 @@ type UserRepository interface {
 }
 
 func NewUser(userId, email, pass string) (User, error) {
-	salt := GenerateRandomKey(32)
+	salt := GenerateRandomKey(128)
 	hpass, err := HashPassword(pass, salt)
 
 	if err != nil {
@@ -44,7 +44,7 @@ func NewUser(userId, email, pass string) (User, error) {
 }
 
 func HashPassword(pass string, salt []byte) ([]byte, error) {
-	return scrypt.Key([]byte(pass), salt, 16384, 8, 1, 32)
+	return scrypt.Key([]byte(pass), salt, 16384, 8, 1, 128)
 }
 
 func SecureCompare(given, actual []byte) bool {
