@@ -1,0 +1,35 @@
+{
+	"ImportPath": "github.com/dahernan/auth",
+	"GoVersion": "go1.4",
+	"Deps": [
+		{
+			"ImportPath": "github.com/boltdb/bolt",
+			"Comment": "v1.0-33-g8be3a28",
+			"Rev": "8be3a2808774dbb10bb98e92072237ad15bd19d4"
+		},
+		{
+			"ImportPath": "github.com/dgrijalva/jwt-go",
+			"Comment": "v2.2.0",
+			"Rev": "8c45ba33b0a495057cba9985cd5dd1a3803ac7b4"
+		},
+		{
+			"ImportPath": "github.com/gorilla/context",
+			"Rev": "14f550f51af52180c2eefed15e5fd18d63c0a64a"
+		},
+		{
+			"ImportPath": "github.com/smartystreets/goconvey/convey",
+			"Comment": "1.5.0-262-g1eff2ca",
+			"Rev": "1eff2caf156994f97fdcda660416c841f4321f0f"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/pbkdf2",
+			"Comment": "null-233",
+			"Rev": "8fec09c61d5d66f460d227fd1df3473d7e015bc6"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/scrypt",
+			"Comment": "null-233",
+			"Rev": "8fec09c61d5d66f460d227fd1df3473d7e015bc6"
+		}
+	]
+}
