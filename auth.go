@@ -62,6 +62,29 @@ func (a *AuthRoute) Login(w http.ResponseWriter, req *http.Request) {
 	w.Write(jtoken)
 }
 
+func (a *AuthRoute) RefreshToken(w http.ResponseWriter, req *http.Request) {
+	userId, _, err := a.authenticate(w, req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	token, err := jwt.GenerateJWTToken(userId, a.options)
+	if err != nil {
+		http.Error(w, "Error while Signing Token :S", http.StatusInternalServerError)
+		return
+	}
+
+	jtoken, err := json.Marshal(map[string]string{"token": token})
+	if err != nil {
+		http.Error(w, "Error marshalling the token to json", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jtoken)
+}
+
 func (a *AuthRoute) Signin(w http.ResponseWriter, req *http.Request) {
 	var authForm map[string]string
 

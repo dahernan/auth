@@ -277,6 +277,75 @@ func TestAuthMiddlewareInvalidToken(t *testing.T) {
 	})
 }
 
+func TestRefreshToken(t *testing.T) {
+	Convey("Refresh token generates a new valid token", t, func() {
+		db, bs := initBoltStore(t)
+		defer db.Close()
+
+		route := NewAuthRoute(bs, options)
+
+		email := "ddhhpp@test.com"
+		pass := "123456"
+
+		id, err := bs.Signin(email, pass)
+		So(err, ShouldBeNil)
+		So(id, ShouldNotBeEmpty)
+
+		So(err, ShouldBeNil)
+
+		// Login to get the token
+		token := loginRequest(t, route, email, pass)
+
+		// Test the Auth
+		req, err := httpRequest("POST", "http://refresh", nil)
+		So(err, ShouldBeNil)
+		req.Header.Add("Authorization", strings.Join([]string{"Bearer", token}, " "))
+
+		w := httptest.NewRecorder()
+		route.RefreshToken(w, req)
+
+		t.Logf("%d - %s", w.Code, w.Body.String())
+		So(w.Code, ShouldEqual, http.StatusOK)
+
+		var response map[string]string
+		_, err = responseToJson(w, &response)
+		So(err, ShouldBeNil)
+		So(response["token"], ShouldNotBeEmpty)
+		So(response["token"], ShouldNotEqual, token)
+
+	})
+}
+
+func TestRefreshInvalidToken(t *testing.T) {
+	Convey("Refresh token generates a new valid token", t, func() {
+		db, bs := initBoltStore(t)
+		defer db.Close()
+
+		route := NewAuthRoute(bs, options)
+
+		email := "ddhhpp@test.com"
+		pass := "123456"
+
+		id, err := bs.Signin(email, pass)
+		So(err, ShouldBeNil)
+		So(id, ShouldNotBeEmpty)
+
+		So(err, ShouldBeNil)
+
+		// Test the Auth
+		req, err := httpRequest("POST", "http://refresh", nil)
+		So(err, ShouldBeNil)
+		req.Header.Add("Authorization", strings.Join([]string{"Bearer", expiredToken}, " "))
+
+		w := httptest.NewRecorder()
+		route.RefreshToken(w, req)
+
+		t.Logf("%d - %s", w.Code, w.Body.String())
+		So(w.Code, ShouldEqual, http.StatusUnauthorized)
+
+	})
+}
+
 func loginRequest(t *testing.T, route *AuthRoute, email string, pass string) string {
 	w := httptest.NewRecorder()
 	req, err := httpRequest("POST", "http://login", map[string]string{
