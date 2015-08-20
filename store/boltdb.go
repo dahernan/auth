@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/boltdb/bolt"
+	"github.com/dahernan/auth/crypto"
 )
 
 type BoltStore struct {
@@ -84,11 +85,11 @@ func (bs *BoltStore) Login(email, pass string) (string, error) {
 	passStored := user.Password
 	salt := user.Salt
 
-	hpass, err := HashPassword(pass, []byte(salt))
+	hpass, err := crypto.HashPassword(pass, []byte(salt))
 	if err != nil {
 		return "", err
 	}
-	passOk := SecureCompare(hpass, []byte(passStored))
+	passOk := crypto.SecureCompare(hpass, []byte(passStored))
 	if !passOk {
 		return "", ErrWrongPassword
 	}

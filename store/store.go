@@ -1,12 +1,9 @@
 package store
 
 import (
-	"crypto/rand"
-	"crypto/subtle"
 	"errors"
-	"io"
 
-	"golang.org/x/crypto/scrypt"
+	"github.com/dahernan/auth/crypto"
 )
 
 var (
@@ -29,8 +26,8 @@ type UserRepository interface {
 }
 
 func NewUser(userId, email, pass string) (User, error) {
-	salt := GenerateRandomKey(128)
-	hpass, err := HashPassword(pass, salt)
+	salt := crypto.GenerateRandomKey(128)
+	hpass, err := crypto.HashPassword(pass, salt)
 
 	if err != nil {
 		return User{}, err
@@ -41,20 +38,4 @@ func NewUser(userId, email, pass string) (User, error) {
 		Password: string(hpass),
 		Salt:     string(salt),
 	}, nil
-}
-
-func HashPassword(pass string, salt []byte) ([]byte, error) {
-	return scrypt.Key([]byte(pass), salt, 16384, 8, 1, 128)
-}
-
-func SecureCompare(given, actual []byte) bool {
-	return subtle.ConstantTimeCompare(given, actual) == 1
-}
-
-func GenerateRandomKey(strength int) []byte {
-	k := make([]byte, strength)
-	if _, err := io.ReadFull(rand.Reader, k); err != nil {
-		return nil
-	}
-	return k
 }

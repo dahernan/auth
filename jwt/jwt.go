@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/dahernan/auth/crypto"
 	jwt "github.com/dgrijalva/jwt-go"
 )
 
@@ -33,10 +34,12 @@ type Options struct {
 func GenerateJWTToken(userId string, op Options) (string, error) {
 	t := jwt.New(jwt.GetSigningMethod(op.SigningMethod))
 
+	now := time.Now()
 	// set claims
-	t.Claims["exp"] = time.Now().Add(op.Expiration).Unix()
-	t.Claims["iat"] = time.Now().Unix()
+	t.Claims["iat"] = now.Unix()
+	t.Claims["exp"] = now.Add(op.Expiration).Unix()
 	t.Claims["sub"] = userId
+	t.Claims["jti"] = crypto.GenerateRandomKey(32)
 
 	tokenString, err := t.SignedString([]byte(op.PrivateKey))
 	if err != nil {
